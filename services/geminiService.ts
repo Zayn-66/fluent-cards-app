@@ -36,7 +36,7 @@ async function decodeAudioData(
  */
 export const speakWord = async (text: string) => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text: `Pronounce clearly: ${text}` }] }],
@@ -79,7 +79,7 @@ export const speakWord = async (text: string) => {
 export const translateWord = async (word: string): Promise<string[]> => {
   if (!word.trim()) return [];
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Provide 3-5 concise Chinese translations for the English word: "${word}". 
@@ -92,7 +92,7 @@ export const translateWord = async (word: string): Promise<string[]> => {
         }
       }
     });
-    
+
     const text = response.text;
     if (text) {
       return JSON.parse(text);
@@ -107,10 +107,10 @@ export const translateWord = async (word: string): Promise<string[]> => {
 /**
  * AI 单词联想服务 (词族/同义词)
  */
-export const getWordAssociations = async (word: string): Promise<{word: string, type: string, chinese: string}[]> => {
+export const getWordAssociations = async (word: string): Promise<{ word: string, type: string, chinese: string }[]> => {
   if (!word.trim()) return [];
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const prompt = `Analyze the English word "${word}". Provide a list of related words including:
     1. Word family (noun, verb, adjective, adverb forms)
     2. Common synonyms
@@ -141,7 +141,7 @@ export const getWordAssociations = async (word: string): Promise<{word: string, 
         }
       }
     });
-    
+
     const text = response.text;
     return text ? JSON.parse(text) : [];
   } catch (error) {
@@ -153,9 +153,9 @@ export const getWordAssociations = async (word: string): Promise<{word: string, 
 /**
  * AI 语境造句服务
  */
-export const generateContextualSentences = async (words: {english: string, chinese: string}[]): Promise<any[]> => {
+export const generateContextualSentences = async (words: { english: string, chinese: string }[]): Promise<any[]> => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const prompt = `You are an English teacher. For each of these words, create one simple and natural example sentence. 
     CRITICAL RULE: Apart from the target word itself, ALL other words in the sentence MUST be very simple (CEFR A1/A2 level). Do not use complex vocabulary.
     Target Words: ${words.map(w => w.english).join(', ')}
@@ -193,9 +193,9 @@ export const generateContextualSentences = async (words: {english: string, chine
 /**
  * AI 故事生成服务
  */
-export const generateStory = async (words: {english: string, chinese: string}[]): Promise<any> => {
+export const generateStory = async (words: { english: string, chinese: string }[]): Promise<any> => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
     const prompt = `Write a short, coherent story that naturally incorporates ALL of the following target words: ${words.map(w => w.english).join(', ')}.
     
     CRITICAL RULES:

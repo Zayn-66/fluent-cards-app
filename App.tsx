@@ -126,16 +126,18 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDeleteDeckGlobal = (deckId: string) => {
-    if (!window.confirm("确定要删除这个卡组吗？删除后无法恢复。")) return;
+  const [deckToDelete, setDeckToDelete] = useState<VocabularyDeck | null>(null);
 
-    const updated = decks.filter(d => d.id !== deckId).map((d, i) => ({ ...d, order: i + 1 }));
+  const confirmDeleteDeck = () => {
+    if (!deckToDelete) return;
+    const updated = decks.filter(d => d.id !== deckToDelete.id).map((d, i) => ({ ...d, order: i + 1 }));
     persistDecks(updated);
 
-    if (activeDeck?.id === deckId) {
+    if (activeDeck?.id === deckToDelete.id) {
       setActiveDeck(null);
       setView(AppView.DASHBOARD);
     }
+    setDeckToDelete(null);
   };
 
   const handleDeleteWord = (cardId: string) => {
@@ -303,7 +305,7 @@ const App: React.FC = () => {
     const pool = Array.from(poolMap.values());
     if (pool.length === 0) { alert("请选择包含单词的词库"); return; }
 
-    const sortedPhases = Array.from(selectedPhases).sort((a, b) => a - b);
+    const sortedPhases = Array.from(selectedPhases).sort((a, b) => Number(a) - Number(b));
     const shuffled = pool.sort(() => Math.random() - 0.5);
 
     setTestResults([]);
@@ -388,7 +390,7 @@ const App: React.FC = () => {
   };
 
   const handlePhaseTransition = () => {
-    const sortedPhases = Array.from(selectedPhases).sort((a, b) => a - b);
+    const sortedPhases = Array.from(selectedPhases).sort((a, b) => Number(a) - Number(b));
     const currentIndex = sortedPhases.indexOf(currentPhase);
 
     if (currentIndex < sortedPhases.length - 1) {
@@ -545,14 +547,12 @@ const App: React.FC = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      e.nativeEvent.stopImmediatePropagation();
-                      handleDeleteDeckGlobal(deck.id);
+                      setDeckToDelete(deck);
                     }}
                     className="absolute top-2 right-2 p-3 z-50 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all cursor-pointer shadow-sm bg-white border border-transparent hover:border-rose-100"
                     title="删除卡组"
-                    role="button"
                   >
-                    <Trash2 size={20} className="pointer-events-none" />
+                    <Trash2 size={20} />
                   </button>
                 </div>
               ))}
@@ -574,8 +574,13 @@ const App: React.FC = () => {
               ) : (
                 <h2 className="text-3xl font-extrabold text-slate-800 flex items-center gap-3">{activeDeck.title}<button onClick={() => { setIsEditingTitle(true); setEditingTitleValue(activeDeck.title); }} className="p-1.5 text-slate-300 hover:text-indigo-600"><Edit2 size={20} /></button></h2>
               )}
-              <Button variant="ghost" onClick={() => setView(AppView.DASHBOARD)}><ArrowLeft size={18} className="mr-2" /> 返回</Button>
-              <Button variant="danger" size="sm" onClick={() => handleDeleteDeckGlobal(activeDeck.id)}><Trash2 size={18} className="mr-2" /> 删除卡组</Button>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={() => setView(AppView.DASHBOARD)} className="text-slate-500 hover:text-slate-800"><ArrowLeft size={20} className="mr-1" /> 返回</Button>
+                <div className="h-6 w-px bg-slate-200 mx-2"></div>
+                <button onClick={() => setDeckToDelete(activeDeck)} className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="删除卡组">
+                  <Trash2 size={20} />
+                </button>
+              </div>
             </div>
 
             {/* 快速入库区域 (Quick Add) */}
@@ -1160,6 +1165,27 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+      {/* --- 全局删除确认弹窗 --- */}
+      {deckToDelete && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-500 mb-2">
+              <Trash2 size={32} />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-2xl font-black text-slate-800">确认删除？</h3>
+              <p className="text-slate-500">
+                您确定要删除卡组 <span className="font-bold text-slate-800">"{deckToDelete.title}"</span> 吗？
+                <br />此操作无法撤销。
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <Button variant="secondary" size="lg" onClick={() => setDeckToDelete(null)}>取消</Button>
+              <Button variant="danger" size="lg" onClick={confirmDeleteDeck}>确认删除</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
