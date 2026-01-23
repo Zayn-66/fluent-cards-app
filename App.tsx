@@ -331,7 +331,11 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       let msg = err.message || "Authentication failed";
-      if (msg.includes("Invalid login credentials")) msg = "账号或密码错误";
+
+      // Handle Supabase configuration errors specifically
+      if (msg.includes("Invalid API key")) {
+        msg = "配置错误：Supabase API Key 无效。请检查部署环境的环境变量 (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)。";
+      } else if (msg.includes("Invalid login credentials")) msg = "账号或密码错误";
       else if (msg.includes("User already registered")) msg = "该邮箱已被注册";
       else if (msg.includes("Password should be at least")) msg = "密码长度至少为 6 位";
       else if (msg.includes("valid email")) msg = "请输入有效的邮箱地址";
