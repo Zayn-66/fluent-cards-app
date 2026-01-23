@@ -101,17 +101,18 @@ export const translateWord = async (word: string): Promise<string[]> => {
 export const getWordAssociations = async (word: string): Promise<{ word: string, type: string, chinese: string }[]> => {
   if (!word.trim()) return [];
 
-  const prompt = `Analyze the English word "${word}". Provide a list of related words including:
-  1. Word family (noun, verb, adjective, adverb forms)
-  2. Common synonyms
+  const prompt = `Analyze the English word "${word}". 
+  Provide 3-5 related words (synonyms, antonyms, derivatives, or phrases).
   
-  Return a JSON array where each object has:
-  - "word": The English word.
-  - "type": The part of speech or relation in Chinese (e.g., "名词", "近义词", "反义词", "形近词").
-  - "chinese": A short Chinese meaning.
+  Return a strictly valid JSON array. Each item must be an object:
+  {
+    "word": "related word",
+    "type": "Chinese relationship type (e.g. 近义词, 反义词, 派生词, 常用短语)",
+    "chinese": "concise Chinese definition"
+  }
   
-  Limit to the 5 most useful associations.
-  Return STRICTLY JSON.`;
+  Example: [{"word": "happy", "type": "近义词", "chinese": "高兴的"}]
+  Return ONLY JSON.`;
 
   try {
     const result = await callDoubao([{ role: "user", content: prompt }], "You are a helpful assistant. Return ONLY valid JSON.");

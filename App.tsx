@@ -1830,7 +1830,12 @@ const App: React.FC = () => {
                             autoComplete="off"
                           />
                           {/* AI 建议与联想 - 简化显示以适应更窄空间 */}
-                          {(isTranslating || isAssociating) && <p className="text-[10px] text-indigo-400 animate-pulse flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> 我看看是啥意思…</p>}
+                          {(isTranslating || isAssociating) && (
+                            <div className="animate-pulse space-y-0.5">
+                              <p className="text-[10px] text-indigo-400 flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> 我看看是啥意思…</p>
+                              <p className="text-[9px] text-slate-400 pl-4">*有时候第一遍翻译是错的，首次出现翻译后，建议等待5s-10s会刷新正确</p>
+                            </div>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -1874,6 +1879,7 @@ const App: React.FC = () => {
                                   className="group flex items-center gap-2 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-all text-left"
                                 >
                                   <span className="font-bold text-slate-700 text-xs group-hover:text-indigo-700">{item.word}</span>
+                                  <span className="text-[10px] text-slate-400 bg-slate-100 px-1 py-0.5 rounded ml-1 group-hover:bg-white">{item.type}</span>
                                 </button>
                               ))}
                             </div>
