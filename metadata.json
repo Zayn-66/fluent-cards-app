@@ -1,6 +1,7 @@
-
 {
-  "name": "FluentCards - 英语单词大师",
+  "name": "FluentCards - 你自己的电子单词本",
   "description": "现代、流畅的英语单词学习平台，采用高质量 AI 文字转语音，助您掌握完美发音。",
-  "requestFramePermissions": ["microphone"]
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

@@ -1798,6 +1798,10 @@ const App: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* 输入区域 */}
                 <div className="lg:col-span-5 space-y-6">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-bold text-slate-700 flex items-center gap-2"><PlusCircle size={20} /> 添加新单词</h3>
+                  </div>
+
                   <div className="bg-white p-5 rounded-[24px] shadow-sm border border-slate-200 space-y-4 sticky top-24">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">卡组名称</label>
@@ -1897,7 +1901,7 @@ const App: React.FC = () => {
                       <p className="font-medium">开始添加你的第一个单词吧</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 animate-in fade-in slide-in-from-bottom-4">
                       {currentCards.map((card) => (
                         <div key={card.id} className="relative group">
                           {/* 优化编号位置和颜色：更明显一点，但不干扰内容，不重叠删除键 */}
