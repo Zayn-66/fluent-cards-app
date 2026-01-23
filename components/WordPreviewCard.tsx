@@ -11,6 +11,7 @@ interface WordPreviewCardProps {
   onDelete?: () => void;
   onUpdate?: (id: string, newEnglish: string, newChinese: string) => void;
   errorCount?: number;
+  showOrder?: boolean;
 }
 
 export const WordPreviewCard: React.FC<WordPreviewCardProps> = ({
@@ -19,7 +20,8 @@ export const WordPreviewCard: React.FC<WordPreviewCardProps> = ({
   onToggleFavorite,
   onDelete,
   onUpdate,
-  errorCount
+  errorCount,
+  showOrder
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editEnglish, setEditEnglish] = useState(card.english);
@@ -47,6 +49,13 @@ export const WordPreviewCard: React.FC<WordPreviewCardProps> = ({
 
   return (
     <div className="group relative bg-white border border-slate-200 p-3 md:p-6 rounded-2xl md:rounded-[24px] shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all duration-300 h-full flex flex-col justify-between">
+      {/* 序号 - Moved to Bottom Right */}
+      {showOrder && (
+        <div className="absolute bottom-3 right-3 text-[10px] font-black text-slate-200 pointer-events-none select-none">
+          #{card.order}
+        </div>
+      )}
+
       {/* 错误次数角标 - Moved to Top Right */}
       {errorCount !== undefined && errorCount > 0 && !isEditing && (
         <div className={`absolute -top-2 -right-2 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-bold border flex items-center gap-1 shadow-sm z-10 ${getErrorBadgeStyle(errorCount)}`}>

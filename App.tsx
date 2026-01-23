@@ -1798,38 +1798,54 @@ const App: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* 输入区域 */}
                 <div className="lg:col-span-5 space-y-6">
-                  <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-200 space-y-6 sticky top-24">
-                    <div className="space-y-2">
+                  <div className="bg-white p-5 rounded-[24px] shadow-sm border border-slate-200 space-y-4 sticky top-24">
+                    <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">卡组名称</label>
                       <input
                         type="text"
                         value={deckTitle}
                         onChange={(e) => setDeckTitle(e.target.value)}
                         placeholder={`例如：Day ${decks.length + 1} 核心词汇`}
-                        className="w-full px-5 py-3 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-indigo-500 outline-none transition-all font-bold text-lg text-slate-800 placeholder:text-slate-300"
+                        className="w-full px-4 py-2 rounded-xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-indigo-500 outline-none transition-all font-bold text-base text-slate-800 placeholder:text-slate-300"
                       />
                     </div>
 
                     <hr className="border-slate-100" />
 
                     <form onSubmit={handleAddCard} className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">英文单词</label>
-                        <input
-                          id="englishInput"
-                          type="text"
-                          value={englishInput}
-                          onChange={(e) => setEnglishInput(e.target.value)}
-                          placeholder="Type English word..."
-                          className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-indigo-500 outline-none transition-all font-mono text-xl text-slate-800 placeholder:text-slate-300"
-                          autoComplete="off"
-                        />
-                        {/* AI 建议与联想 */}
-                        {(isTranslating || isAssociating) && <p className="text-xs text-indigo-400 animate-pulse flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> 正在智能联想...</p>}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">英文单词</label>
+                          <input
+                            id="englishInput"
+                            type="text"
+                            value={englishInput}
+                            onChange={(e) => setEnglishInput(e.target.value)}
+                            placeholder="Type word..."
+                            className="w-full px-4 py-3 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-indigo-500 outline-none transition-all font-mono text-lg text-slate-800 placeholder:text-slate-300"
+                            autoComplete="off"
+                          />
+                          {/* AI 建议与联想 - 简化显示以适应更窄空间 */}
+                          {(isTranslating || isAssociating) && <p className="text-[10px] text-indigo-400 animate-pulse flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> 我看看是啥意思…</p>}
+                        </div>
 
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">中文释义</label>
+                          <input
+                            type="text"
+                            value={chineseInput}
+                            onChange={(e) => setChineseInput(e.target.value)}
+                            placeholder="中文意思"
+                            className="w-full px-4 py-3 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-indigo-500 outline-none transition-all text-lg text-slate-800 placeholder:text-slate-300"
+                          />
+                        </div>
+                      </div>
+
+                      {/* 建议区域放在下方 */}
+                      <div className="space-y-2">
                         {/* 翻译建议 */}
                         {suggestedTranslations.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
+                          <div className="flex flex-wrap gap-2">
                             {suggestedTranslations.map(s => (
                               <button key={s} type="button" onClick={() => setChineseInput(s)} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg hover:bg-indigo-100 transition-colors">
                                 {s}
@@ -1840,8 +1856,8 @@ const App: React.FC = () => {
 
                         {/* 词源拓展 (Associations) */}
                         {suggestedAssociations.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-slate-100 space-y-2">
-                            <p className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Sparkles size={12} /> 词源拓展 (点击添加)</p>
+                          <div className="pt-2 border-t border-slate-100 space-y-2">
+                            <p className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Sparkles size={12} /> 拓展</p>
                             <div className="flex flex-wrap gap-2">
                               {suggestedAssociations.map((item, idx) => (
                                 <button
@@ -1849,28 +1865,16 @@ const App: React.FC = () => {
                                   type="button"
                                   onClick={() => {
                                     setEnglishInput(item.word);
-                                    setChineseInput(item.chinese); // 预填中文，触发新的翻译建议
+                                    setChineseInput(item.chinese);
                                   }}
-                                  className="group flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-all text-left"
+                                  className="group flex items-center gap-2 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-all text-left"
                                 >
-                                  <span className="font-bold text-slate-700 group-hover:text-indigo-700">{item.word}</span>
-                                  <span className="text-[10px] uppercase text-slate-400 font-medium bg-slate-200 px-1.5 rounded">{item.type.slice(0, 4)}</span>
+                                  <span className="font-bold text-slate-700 text-xs group-hover:text-indigo-700">{item.word}</span>
                                 </button>
                               ))}
                             </div>
                           </div>
                         )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">中文释义</label>
-                        <input
-                          type="text"
-                          value={chineseInput}
-                          onChange={(e) => setChineseInput(e.target.value)}
-                          placeholder="输入中文意思"
-                          className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-indigo-500 outline-none transition-all text-lg text-slate-800 placeholder:text-slate-300"
-                        />
                       </div>
 
                       <Button type="submit" className="w-full h-14 rounded-2xl text-lg mt-2" disabled={!englishInput.trim() || !chineseInput.trim()}>
@@ -1893,12 +1897,13 @@ const App: React.FC = () => {
                       <p className="font-medium">开始添加你的第一个单词吧</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-in fade-in slide-in-from-bottom-4">
                       {currentCards.map((card) => (
                         <div key={card.id} className="relative group">
-                          <span className="absolute top-3 left-4 text-[10px] font-black text-slate-200 z-10">#{card.order}</span>
+                          {/* 优化编号位置和颜色：更明显一点，但不干扰内容，不重叠删除键 */}
                           <WordPreviewCard
                             card={card}
+                            showOrder={true}
                             onDelete={() => setCurrentCards(currentCards.filter(c => c.id !== card.id))}
                             isFavorited={favorites.some(f => f.english.toLowerCase() === card.english.toLowerCase())}
                             onToggleFavorite={() => toggleFavorite(card)}
