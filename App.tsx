@@ -679,12 +679,28 @@ const App: React.FC = () => {
     const isEnglishTask = currentPhase === TestPhase.INPUT_ENGLISH;
     let target = isEnglishTask ? currentWord.english : currentWord.chinese;
 
-    if (currentPhase === TestPhase.INPUT_CHINESE) {
-      target = target.replace(/^[a-z]+\.\s*/ig, '');
-    }
-
     const normalize = (t: string) => t.toLowerCase().trim().replace(/[^a-z0-9\s\u4e00-\u9fa5]/g, '');
-    const isCorrect = normalize(input) === normalize(target);
+
+    let isCorrect: boolean;
+
+    if (currentPhase === TestPhase.INPUT_CHINESE) {
+      // 处理中文释义：支持分号分隔的多个释义
+      // 首先去除词性标记（如 n., v. 等）
+      const cleanTarget = target.replace(/^[a-z]+\.\s*/ig, '');
+
+      // 按分号拆分多个释义
+      const meanings = cleanTarget.split(/[;；]/).map(m => normalize(m.trim())).filter(m => m.length > 0);
+
+      // 用户答案匹配任意一个释义即可
+      const normalizedInput = normalize(input);
+      isCorrect = meanings.some(meaning => normalizedInput === meaning);
+
+      // 用于显示的正确答案（展示原始格式）
+      target = cleanTarget;
+    } else {
+      // 英文输入任务，保持原有逻辑
+      isCorrect = normalize(input) === normalize(target);
+    }
 
     setTestResults(prev => [...prev, {
       id: crypto.randomUUID(),
@@ -1232,7 +1248,7 @@ const App: React.FC = () => {
               <div className="flex items-center gap-2 md:gap-4">
                 <div className="flex-1 flex gap-2 w-full">
                   <input type="text" value={quickAddEnglish} onChange={(e) => setQuickAddEnglish(e.target.value)} placeholder="单词..." className="w-1/2 min-w-0 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none font-semibold text-slate-800 text-sm md:text-base transition-all placeholder:text-slate-400" />
-                  <input type="text" value={quickAddChinese} onChange={(e) => setQuickAddChinese(e.target.value)} placeholder="释义..." className="w-1/2 min-w-0 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none font-medium text-slate-600 text-sm md:text-base transition-all placeholder:text-slate-400" />
+                  <input type="text" value={quickAddChinese} onChange={(e) => setQuickAddChinese(e.target.value)} placeholder="释义（多个用分号分隔）..." className="w-1/2 min-w-0 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none font-medium text-slate-600 text-sm md:text-base transition-all placeholder:text-slate-400" />
                 </div>
                 <Button onClick={handleQuickAdd} disabled={!quickAddEnglish.trim() || !quickAddChinese.trim()} size="sm" className="h-10 md:h-11 px-3 md:px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200 active:scale-95 transition-all">
                   <Plus size={18} className="md:mr-1" /> <span className="hidden md:inline">添加</span>
@@ -1246,7 +1262,10 @@ const App: React.FC = () => {
                   {quickAddSuggestedTranslations.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {quickAddSuggestedTranslations.map(s => (
-                        <button key={s} onClick={() => setQuickAddChinese(s)} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg hover:bg-indigo-100 transition-colors">
+                        <button key={s} onClick={() => {
+                          const current = quickAddChinese.trim();
+                          setQuickAddChinese(current ? `${current}；${s}` : s);
+                        }} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg hover:bg-indigo-100 transition-colors">
                           {s}
                         </button>
                       ))}
@@ -1901,7 +1920,7 @@ const App: React.FC = () => {
                             type="text"
                             value={chineseInput}
                             onChange={(e) => setChineseInput(e.target.value)}
-                            placeholder="中文意思"
+                            placeholder="中文释义（多个用分号分隔）"
                             className="w-full px-4 py-3 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-indigo-500 outline-none transition-all text-lg text-slate-800 placeholder:text-slate-300"
                           />
                         </div>
@@ -1913,7 +1932,10 @@ const App: React.FC = () => {
                         {suggestedTranslations.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {suggestedTranslations.map(s => (
-                              <button key={s} type="button" onClick={() => setChineseInput(s)} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg hover:bg-indigo-100 transition-colors">
+                              <button key={s} type="button" onClick={() => {
+                                const current = chineseInput.trim();
+                                setChineseInput(current ? `${current}；${s}` : s);
+                              }} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg hover:bg-indigo-100 transition-colors">
                                 {s}
                               </button>
                             ))}
