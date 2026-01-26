@@ -44,6 +44,9 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
   const [verificationChecking, setVerificationChecking] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'offline'>('offline');
   const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
@@ -347,6 +350,8 @@ const App: React.FC = () => {
   };
 
   // Verification Polling
+  // Verification Polling REMOVED for OTP flow
+  /*
   useEffect(() => {
     let interval: any;
     if (verificationSent && authEmail && authPassword) {
@@ -365,6 +370,30 @@ const App: React.FC = () => {
     }
     return () => clearInterval(interval);
   }, [verificationSent, authEmail, authPassword]);
+  */
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOtpError(null);
+    setIsVerifyingOtp(true);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: authEmail,
+        token: otp,
+        type: 'signup'
+      });
+      if (error) throw error;
+      if (data.session) {
+        setUser(data.session.user);
+        setVerificationSent(false);
+        setView(AppView.DASHBOARD);
+      }
+    } catch (err: any) {
+      setOtpError(err.message || "验证失败，请检查验证码");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -958,30 +987,58 @@ const App: React.FC = () => {
         {view === AppView.AUTH && (
           <div className="max-w-md mx-auto py-10 animate-in zoom-in-95">
             {verificationSent ? (
-              // Verification Sent UI
+              // Verification Sent UI (OTP Mode)
               <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-xl text-center space-y-6">
                 <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
                   <Mail size={36} />
                 </div>
-                <h2 className="text-2xl font-black text-slate-800">验证邮件已发送</h2>
+                <h2 className="text-2xl font-black text-slate-800">请输入验证码</h2>
                 <div className="text-slate-500 space-y-2 text-sm">
-                  <p>我们需要验证您的邮箱地址：<br /><span className="font-bold text-slate-700">{authEmail}</span></p>
-                  <p>请检查您的收件箱（包括垃圾邮件文件夹），点击邮件中的验证链接。验证成功后，此页面将自动跳转。</p>
+                  <p>验证码已发送至：<br /><span className="font-bold text-slate-700">{authEmail}</span></p>
+                  <p>请输入邮件中的 6 位数字验证码完成注册。</p>
                 </div>
 
-                <div className="pt-4 space-y-3">
-                  <div className="flex items-center justify-center gap-2 text-indigo-600 text-sm font-medium animate-pulse">
-                    <RefreshCw size={14} className="animate-spin" />
-                    正在等待验证确认...
+                <form onSubmit={handleVerifyOtp} className="space-y-4 pt-2">
+                  <div className="space-y-1 text-left">
+                    <label className="block text-sm font-medium text-slate-700 ml-1">验证码</label>
+                    <div className="relative">
+                      <LockKeyhole className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                      <input
+                        type="text"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 focus:bg-white focus:outline-none transition-all font-mono tracking-widest text-center text-lg"
+                        placeholder="000000"
+                        maxLength={6}
+                        required
+                      />
+                    </div>
                   </div>
 
-                  <p className="text-xs text-slate-400">长时间未跳转？</p>
+                  {otpError && (
+                    <div className="bg-red-50 text-red-600 px-4 py-3 rounded-2xl text-sm flex items-start gap-2 animate-in slide-in-from-top-2">
+                      <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                      <span>{otpError}</span>
+                    </div>
+                  )}
+
+                  <Button
+                    isLoading={isVerifyingOtp}
+                    className="w-full"
+                    type="submit"
+                  >
+                    验证并登录
+                  </Button>
+                </form>
+
+                <div className="pt-2">
+                  <p className="text-xs text-slate-400 mb-2">收不到验证码？</p>
                   <Button
                     onClick={() => setVerificationSent(false)}
-                    variant="secondary"
-                    className="w-full"
+                    variant="text"
+                    className="w-full text-slate-500 hover:text-slate-700"
                   >
-                    返回登录页手动登录
+                    返回修改邮箱
                   </Button>
                 </div>
               </div>

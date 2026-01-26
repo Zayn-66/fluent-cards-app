@@ -1,0 +1,8 @@
+{
+    "rewrites": [
+        {
+            "source": "/supa-api/:match*",
+            "destination": "https://vqfsbewzizanswvxkexq.supabase.co/:match*"
+        }
+    ]
+}
