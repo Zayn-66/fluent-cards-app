@@ -1248,12 +1248,15 @@ const App: React.FC = () => {
               <div className="flex items-center gap-2 md:gap-4">
                 <div className="flex-1 flex gap-2 w-full">
                   <input type="text" value={quickAddEnglish} onChange={(e) => setQuickAddEnglish(e.target.value)} placeholder="单词..." className="w-1/2 min-w-0 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none font-semibold text-slate-800 text-sm md:text-base transition-all placeholder:text-slate-400" />
-                  <input type="text" value={quickAddChinese} onChange={(e) => setQuickAddChinese(e.target.value)} placeholder="释义（多个用分号分隔）..." className="w-1/2 min-w-0 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none font-medium text-slate-600 text-sm md:text-base transition-all placeholder:text-slate-400" />
+                  <input type="text" value={quickAddChinese} onChange={(e) => setQuickAddChinese(e.target.value)} placeholder="释义..." className="w-1/2 min-w-0 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none font-medium text-slate-600 text-sm md:text-base transition-all placeholder:text-slate-400" />
                 </div>
                 <Button onClick={handleQuickAdd} disabled={!quickAddEnglish.trim() || !quickAddChinese.trim()} size="sm" className="h-10 md:h-11 px-3 md:px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200 active:scale-95 transition-all">
                   <Plus size={18} className="md:mr-1" /> <span className="hidden md:inline">添加</span>
                 </Button>
               </div>
+
+              {/* 提示信息 */}
+              <p className="text-[10px] text-slate-400 mt-2 ml-1">💡 多个释义可用分号分隔，或点击下方AI建议自动追加</p>
 
               {(isQuickAddTranslating || isQuickAddAssociating) && <p className="text-xs text-indigo-400 animate-pulse flex items-center gap-1 mt-2"><Loader2 size={12} className="animate-spin" /> 正在智能联想...</p>}
 
@@ -1915,12 +1918,15 @@ const App: React.FC = () => {
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">中文释义</label>
+                          <div className="flex items-baseline justify-between">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">中文释义</label>
+                            <span className="text-[10px] text-slate-400">💡 多个释义用分号分隔</span>
+                          </div>
                           <input
                             type="text"
                             value={chineseInput}
                             onChange={(e) => setChineseInput(e.target.value)}
-                            placeholder="中文释义（多个用分号分隔）"
+                            placeholder="中文意思"
                             className="w-full px-4 py-3 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-indigo-500 outline-none transition-all text-lg text-slate-800 placeholder:text-slate-300"
                           />
                         </div>

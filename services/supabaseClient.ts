@@ -8,14 +8,32 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('Supabase URL or Anon Key is missing. Please check your .env file.')
 }
 
+// Handle proxy path: convert relative URL to absolute URL for local development
+const getAbsoluteUrl = (url: string): string => {
+    if (!url) return 'https://placeholder.supabase.co';
+
+    // If it's a relative path (like /supa-api), convert to absolute URL
+    if (url.startsWith('/')) {
+        // In browser environment, we can construct absolute URL
+        if (typeof window !== 'undefined') {
+            return `${window.location.origin}${url}`;
+        }
+        // Fallback for SSR or other environments
+        return `http://localhost:3000${url}`;
+    }
+
+    return url;
+};
+
 export const supabase = createClient(
-    supabaseUrl || 'https://placeholder.supabase.co',
+    getAbsoluteUrl(supabaseUrl),
     supabaseAnonKey || 'placeholder'
 )
 
 // Debug log to help identify config issues in production
 console.log('Supabase Client Initialized:', {
-    url: supabaseUrl ? (supabaseUrl.substring(0, 15) + '...') : 'MISSING',
+    originalUrl: supabaseUrl,
+    absoluteUrl: getAbsoluteUrl(supabaseUrl),
     keyLength: supabaseAnonKey ? supabaseAnonKey.length : 0,
     isDev: import.meta.env.DEV
 });
