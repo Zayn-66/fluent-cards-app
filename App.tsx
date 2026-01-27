@@ -48,6 +48,7 @@ const App: React.FC = () => {
   const [otpError, setOtpError] = useState<string | null>(null);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const [resendCountdown, setResendCountdown] = useState(0);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'offline'>('offline');
   const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -330,6 +331,7 @@ const App: React.FC = () => {
         });
         if (error) throw error;
         setVerificationSent(true);
+        setResendCountdown(60); // 60秒倒计时
       }
     } catch (err: any) {
       console.error(err);
@@ -339,11 +341,54 @@ const App: React.FC = () => {
       if (msg.includes("Invalid API key")) {
         msg = "配置错误：Supabase API Key 无效。请检查部署环境的环境变量 (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)。";
       } else if (msg.includes("Invalid login credentials")) msg = "账号或密码错误";
+      else if (msg.includes("Email not confirmed")) msg = "邮箱未验证，请先完成邮箱验证";
       else if (msg.includes("User already registered")) msg = "该邮箱已被注册";
       else if (msg.includes("Password should be at least")) msg = "密码长度至少为 6 位";
       else if (msg.includes("valid email")) msg = "请输入有效的邮箱地址";
       else if (msg.includes("Rate limit exceeded")) msg = "尝试次数过多，请稍后再试";
+      else if (msg.includes("Email rate limit exceeded")) msg = "邮件发送频率过高，请稍后再试";
       setAuthError(msg);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Resend verification code
+  const handleResendVerification = async () => {
+    if (resendCountdown > 0 || !authEmail || !authPassword) return;
+
+    setAuthLoading(true);
+    setOtpError(null);
+
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: authEmail,
+        password: authPassword,
+      });
+      if (error) throw error;
+      setResendCountdown(60); // 重新开始60秒倒计时
+      setOtpError("验证码已重新发送，请检查邮箱");
+      setTimeout(() => setOtpError(null), 3000);
+    } catch (err: any) {
+      let msg = err.message || "重新发送失败";
+      if (msg.includes("Email rate limit exceeded")) msg = "发送频率过高，请稍后再试";
+      else if (msg.includes("User already registered")) {
+        // 用户已注册，尝试使用 resend 方法
+        try {
+          const { error: resendError } = await supabase.auth.resend({
+            type: 'signup',
+            email: authEmail,
+          });
+          if (resendError) throw resendError;
+          setResendCountdown(60);
+          setOtpError("验证码已重新发送，请检查邮箱");
+          setTimeout(() => setOtpError(null), 3000);
+        } catch (resendErr: any) {
+          setOtpError(resendErr.message || "重新发送失败");
+        }
+      } else {
+        setOtpError(msg);
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -394,6 +439,14 @@ const App: React.FC = () => {
       setIsVerifyingOtp(false);
     }
   };
+
+  // Countdown timer for resend button
+  useEffect(() => {
+    if (resendCountdown > 0) {
+      const timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCountdown]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -1047,10 +1100,23 @@ const App: React.FC = () => {
                   </Button>
                 </form>
 
-                <div className="pt-2">
-                  <p className="text-xs text-slate-400 mb-2">收不到验证码？</p>
+                <div className="pt-2 space-y-2">
+                  <p className="text-xs text-slate-400">没有收到验证码？</p>
                   <Button
-                    onClick={() => setVerificationSent(false)}
+                    onClick={handleResendVerification}
+                    variant="text"
+                    className="w-full text-indigo-600 hover:text-indigo-700 disabled:text-slate-400"
+                    disabled={resendCountdown > 0 || authLoading}
+                  >
+                    {resendCountdown > 0 ? `重新发送 (${resendCountdown}s)` : '重新发送验证码'}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setVerificationSent(false);
+                      setOtp('');
+                      setOtpError(null);
+                      setResendCountdown(0);
+                    }}
                     variant="text"
                     className="w-full text-slate-500 hover:text-slate-700"
                   >
