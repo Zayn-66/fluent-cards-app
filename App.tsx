@@ -1263,7 +1263,7 @@ const App: React.FC = () => {
                               value={resetOtp}
                               onChange={(e) => setResetOtp(e.target.value)}
                               className="w-full pl-12 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 focus:bg-white focus:outline-none transition-all font-mono tracking-widest text-center text-lg"
-                              placeholder="000000"
+                              placeholder="00000000"
                               maxLength={10}
                               required
                             />
