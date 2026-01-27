@@ -178,12 +178,6 @@ const App: React.FC = () => {
       console.log("Auth Event:", event);
       setUser(session?.user ?? null);
 
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsResettingPassword(true);
-        setView(AppView.AUTH);
-        setAuthError(null);
-      }
-
       if (session?.user) {
         setSyncStatus('synced');
         loadDataFromCloud(session.user.id);
@@ -269,6 +263,9 @@ const App: React.FC = () => {
 
   const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [resetOtp, setResetOtp] = useState('');
+  const [resetOtpError, setResetOtpError] = useState<string | null>(null);
+  const [isVerifyingResetOtp, setIsVerifyingResetOtp] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState('');
   const [isPasswordResetSuccess, setIsPasswordResetSuccess] = useState(false);
@@ -312,11 +309,16 @@ const App: React.FC = () => {
 
     try {
       if (isForgotPasswordMode) {
-        const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
-          redirectTo: window.location.origin,
+        // 使用 OTP 方式发送密码重置验证码
+        const { error } = await supabase.auth.signInWithOtp({
+          email: authEmail,
+          options: {
+            shouldCreateUser: false, // 不创建新用户
+          }
         });
         if (error) throw error;
         setResetEmailSent(true);
+        setResendCountdown(60);
       } else if (isLoginMode) {
         const { error } = await supabase.auth.signInWithPassword({
           email: authEmail,
@@ -389,6 +391,91 @@ const App: React.FC = () => {
       } else {
         setOtpError(msg);
       }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // 验证密码重置 OTP 并设置新密码
+  const handleVerifyResetOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!resetOtp || !authPassword || !resetPasswordConfirm) {
+      setResetOtpError("请填写所有字段");
+      return;
+    }
+
+    if (authPassword !== resetPasswordConfirm) {
+      setResetOtpError("两次输入的密码不一致");
+      return;
+    }
+
+    setIsVerifyingResetOtp(true);
+    setResetOtpError(null);
+
+    try {
+      // 首先使用 OTP 验证并登录
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email: authEmail,
+        token: resetOtp,
+        type: 'email' // 使用 email 类型的 OTP
+      });
+
+      if (verifyError) throw verifyError;
+
+      if (data.session) {
+        // OTP 验证成功，现在更新密码
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: authPassword
+        });
+
+        if (updateError) throw updateError;
+
+        // 密码更新成功
+        setIsPasswordResetSuccess(true);
+        setResetEmailSent(false);
+        setIsForgotPasswordMode(false);
+        setResetOtp('');
+        setAuthPassword('');
+        setResetPasswordConfirm('');
+
+        // 登出用户，要求使用新密码登录
+        await supabase.auth.signOut();
+      }
+    } catch (err: any) {
+      console.error('Reset password error:', err);
+      let msg = err.message || "验证失败";
+      if (msg.includes("Token has expired")) msg = "验证码已过期，请重新获取";
+      else if (msg.includes("Invalid token")) msg = "验证码无效，请检查后重试";
+      setResetOtpError(msg);
+    } finally {
+      setIsVerifyingResetOtp(false);
+    }
+  };
+
+  // 重新发送密码重置验证码
+  const handleResendResetOtp = async () => {
+    if (resendCountdown > 0 || !authEmail) return;
+
+    setAuthLoading(true);
+    setResetOtpError(null);
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: authEmail,
+        options: {
+          shouldCreateUser: false,
+        }
+      });
+
+      if (error) throw error;
+      setResendCountdown(60);
+      setResetOtpError("验证码已重新发送，请检查邮箱");
+      setTimeout(() => setResetOtpError(null), 3000);
+    } catch (err: any) {
+      let msg = err.message || "重新发送失败";
+      if (msg.includes("Email rate limit exceeded")) msg = "发送频率过高，请稍后再试";
+      setResetOtpError(msg);
     } finally {
       setAuthLoading(false);
     }
@@ -1077,7 +1164,7 @@ const App: React.FC = () => {
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}
                         className="w-full pl-12 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 focus:bg-white focus:outline-none transition-all font-mono tracking-widest text-center text-lg"
-                        placeholder="000000"
+                        placeholder="00000000"
                         maxLength={10}
                         required
                       />
@@ -1151,13 +1238,115 @@ const App: React.FC = () => {
                   )}
 
                   {resetEmailSent && !isResettingPassword ? (
-                    <div className="text-center space-y-6">
-                      <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto animate-bounce"><Mail size={32} /></div>
-                      <div className="space-y-2">
-                        <h3 className="text-xl font-bold text-slate-800">重置邮件已发送</h3>
-                        <p className="text-slate-500 text-sm">请检查您的邮箱 <span className="font-bold text-slate-700">{authEmail}</span>，点击链接重置密码。</p>
+                    // OTP 验证码输入 + 设置新密码
+                    <div className="space-y-6">
+                      <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto animate-bounce">
+                        <LockKeyhole size={36} />
                       </div>
-                      <Button variant="secondary" className="w-full" onClick={() => { setResetEmailSent(false); setIsForgotPasswordMode(false); }}>返回登录</Button>
+                      <div className="text-center space-y-2">
+                        <h3 className="text-2xl font-black text-slate-800">重置密码</h3>
+                        <p className="text-slate-500 text-sm">
+                          验证码已发送至：<br />
+                          <span className="font-bold text-slate-700">{authEmail}</span>
+                        </p>
+                        <p className="text-slate-500 text-sm">请输入验证码并设置新密码。</p>
+                      </div>
+
+                      <form onSubmit={handleVerifyResetOtp} className="space-y-4">
+                        {/* 验证码输入 */}
+                        <div className="space-y-1 text-left">
+                          <label className="block text-sm font-medium text-slate-700 ml-1">验证码</label>
+                          <div className="relative">
+                            <LockKeyhole className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                            <input
+                              type="text"
+                              value={resetOtp}
+                              onChange={(e) => setResetOtp(e.target.value)}
+                              className="w-full pl-12 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 focus:bg-white focus:outline-none transition-all font-mono tracking-widest text-center text-lg"
+                              placeholder="000000"
+                              maxLength={10}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {/* 新密码 */}
+                        <div className="space-y-1 text-left">
+                          <label className="block text-sm font-medium text-slate-700 ml-1">新密码</label>
+                          <div className="relative">
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                            <input
+                              type="password"
+                              value={authPassword}
+                              onChange={(e) => setAuthPassword(e.target.value)}
+                              className="w-full pl-12 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 focus:bg-white focus:outline-none transition-all"
+                              placeholder="至少 6 位字符"
+                              minLength={6}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {/* 确认密码 */}
+                        <div className="space-y-1 text-left">
+                          <label className="block text-sm font-medium text-slate-700 ml-1">确认新密码</label>
+                          <div className="relative">
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                            <input
+                              type="password"
+                              value={resetPasswordConfirm}
+                              onChange={(e) => setResetPasswordConfirm(e.target.value)}
+                              className="w-full pl-12 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 focus:bg-white focus:outline-none transition-all"
+                              placeholder="再次输入新密码"
+                              minLength={6}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {resetOtpError && (
+                          <div className={`${resetOtpError.includes("已重新发送") ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"} px-4 py-3 rounded-2xl text-sm flex items-start gap-2 animate-in slide-in-from-top-2`}>
+                            <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                            <span>{resetOtpError}</span>
+                          </div>
+                        )}
+
+                        <Button
+                          isLoading={isVerifyingResetOtp}
+                          className="w-full"
+                          type="submit"
+                        >
+                          确认重置密码
+                        </Button>
+
+                        <div className="pt-2 space-y-2">
+                          <p className="text-xs text-slate-400">没有收到验证码？</p>
+                          <Button
+                            onClick={handleResendResetOtp}
+                            variant="text"
+                            className="w-full text-indigo-600 hover:text-indigo-700 disabled:text-slate-400"
+                            disabled={resendCountdown > 0 || authLoading}
+                            type="button"
+                          >
+                            {resendCountdown > 0 ? `重新发送 (${resendCountdown}s)` : '重新发送验证码'}
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setResetEmailSent(false);
+                              setResetOtp('');
+                              setAuthPassword('');
+                              setResetPasswordConfirm('');
+                              setResetOtpError(null);
+                              setResendCountdown(0);
+                            }}
+                            variant="text"
+                            className="w-full text-slate-500 hover:text-slate-700"
+                            type="button"
+                          >
+                            返回修改邮箱
+                          </Button>
+                        </div>
+                      </form>
                     </div>
                   ) : isPasswordResetSuccess ? (
                     <div className="text-center space-y-6">
@@ -1179,7 +1368,7 @@ const App: React.FC = () => {
                       </Button>
                     </div>
                   ) : (
-                    <form onSubmit={isResettingPassword ? handleUpdatePassword : handleAuth} className="space-y-4">
+                    <form onSubmit={handleAuth} className="space-y-4">
                       {!isResettingPassword && (
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-slate-400 uppercase ml-1">电子邮箱</label>
