@@ -1064,7 +1064,7 @@ const App: React.FC = () => {
                 <h2 className="text-2xl font-black text-slate-800">请输入验证码</h2>
                 <div className="text-slate-500 space-y-2 text-sm">
                   <p>验证码已发送至：<br /><span className="font-bold text-slate-700">{authEmail}</span></p>
-                  <p>请输入邮件中的 6 位数字验证码完成注册。</p>
+                  <p>请输入邮件中的数字验证码完成注册。</p>
                 </div>
 
                 <form onSubmit={handleVerifyOtp} className="space-y-4 pt-2">
@@ -1078,7 +1078,7 @@ const App: React.FC = () => {
                         onChange={(e) => setOtp(e.target.value)}
                         className="w-full pl-12 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 focus:bg-white focus:outline-none transition-all font-mono tracking-widest text-center text-lg"
                         placeholder="000000"
-                        maxLength={6}
+                        maxLength={10}
                         required
                       />
                     </div>
