@@ -2176,8 +2176,8 @@ const App: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1 whitespace-nowrap">中文释义</label>
                             <div className="flex flex-col text-[9px] text-slate-400 leading-tight">
-                              <span>💡 多个释义</span>
-                              <span>用分号分隔</span>
+                              <span>💡多个释义</span>
+                              <span> 用分号分隔</span>
                             </div>
                           </div>
                           <input
