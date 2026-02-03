@@ -1,20 +1,53 @@
 
-const API_KEY = import.meta.env.VITE_DOUBAO_API_KEY;
-const MODEL_ID = import.meta.env.VITE_DOUBAO_MODEL_ID;
+import { supabase } from './supabaseClient';
 
-if (!API_KEY || !MODEL_ID) {
-  console.error("CRITICAL ERROR: VITE_DOUBAO_API_KEY or VITE_DOUBAO_MODEL_ID is missing in your .env file.");
+const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY;
+
+if (!API_KEY) {
+  console.error("CRITICAL ERROR: VITE_DEEPSEEK_API_KEY is missing in your .env file.");
 }
 
 /**
- * Generic helper to call Doubao (Volcengine) API
+ * Cache Management Functions
  */
-async function callDoubao(messages: any[], systemPrompt: string = "") {
-  if (!API_KEY || !MODEL_ID) {
-    throw new Error("Missing Doubao API Configuration");
+async function getFromCache(cacheKey: string): Promise<any | null> {
+  try {
+    const { data, error } = await supabase
+      .from('ai_cache')
+      .select('result')
+      .eq('cache_key', cacheKey)
+      .single();
+
+    if (error || !data) return null;
+
+    console.log('✅ Cache Hit:', cacheKey);
+    return data.result;
+  } catch (e) {
+    console.warn('Cache read error:', e);
+    return null;
+  }
+}
+
+async function saveToCache(cacheKey: string, result: any): Promise<void> {
+  try {
+    await supabase
+      .from('ai_cache')
+      .insert({ cache_key: cacheKey, result });
+    console.log('💾 Cached:', cacheKey);
+  } catch (e) {
+    console.warn('Cache save error:', e);
+  }
+}
+
+/**
+ * Generic helper to call DeepSeek API
+ */
+async function callDeepSeek(messages: any[], systemPrompt: string = "") {
+  if (!API_KEY) {
+    throw new Error("Missing DeepSeek API Configuration");
   }
 
-  const url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+  const url = "https://api.deepseek.com/chat/completions";
 
   const fullMessages = [
     { role: "system", content: systemPrompt },
@@ -29,7 +62,7 @@ async function callDoubao(messages: any[], systemPrompt: string = "") {
         "Authorization": `Bearer ${API_KEY}`
       },
       body: JSON.stringify({
-        model: MODEL_ID,
+        model: "deepseek-chat",
         messages: fullMessages,
         stream: false,
         temperature: 0.7,
@@ -38,16 +71,16 @@ async function callDoubao(messages: any[], systemPrompt: string = "") {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Doubao API Error: ${response.status} - ${errorText}`);
+      throw new Error(`DeepSeek API Error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
-    if (!content) throw new Error("Empty response from Doubao");
+    if (!content) throw new Error("Empty response from DeepSeek");
     return content;
   } catch (error) {
-    console.error("Doubao Call Failed:", error);
+    console.error("DeepSeek Call Failed:", error);
     throw error;
   }
 }
@@ -66,9 +99,7 @@ export const speakWord = async (text: string) => {
   try {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
-    // Remove chinese characters if any, as we usually want to read english word
-    // But specific logic depends on requirement. Here simple implementation.
-    window.speechSynthesis.cancel(); // Cancel current speaking
+    window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
   } catch (error) {
     console.error("TTS Error:", error);
@@ -76,10 +107,16 @@ export const speakWord = async (text: string) => {
 };
 
 /**
- * AI 翻译建议服务
+ * AI 翻译建议服务 (带缓存)
  */
 export const translateWord = async (word: string): Promise<string[]> => {
   if (!word.trim()) return [];
+
+  const cacheKey = `translate:${word.toLowerCase().trim()}`;
+
+  // Check cache first
+  const cached = await getFromCache(cacheKey);
+  if (cached) return cached;
 
   const prompt = `Provide 3-5 concise Chinese translations for the English word: "${word}". 
   IMPORTANT: Each translation MUST include a part-of-speech prefix (e.g., n. 苹果, v. 跑, adj. 美丽的).
@@ -87,8 +124,13 @@ export const translateWord = async (word: string): Promise<string[]> => {
   Return ONLY a JSON Array of strings. Example: ["n. 苹果", "n. 手机"]`;
 
   try {
-    const result = await callDoubao([{ role: "user", content: prompt }], "You are a helpful translation assistant. You ALWAYS return valid JSON arrays.");
-    return JSON.parse(cleanJson(result));
+    const result = await callDeepSeek([{ role: "user", content: prompt }], "You are a helpful translation assistant. You ALWAYS return valid JSON arrays.");
+    const parsed = JSON.parse(cleanJson(result));
+
+    // Save to cache
+    await saveToCache(cacheKey, parsed);
+
+    return parsed;
   } catch (error) {
     console.error("Translation Error:", error);
     return [];
@@ -96,10 +138,16 @@ export const translateWord = async (word: string): Promise<string[]> => {
 };
 
 /**
- * AI 单词联想服务 (词族/同义词)
+ * AI 单词联想服务 (词族/同义词) - 带缓存
  */
 export const getWordAssociations = async (word: string): Promise<{ word: string, type: string, chinese: string }[]> => {
   if (!word.trim()) return [];
+
+  const cacheKey = `associations:${word.toLowerCase().trim()}`;
+
+  // Check cache first
+  const cached = await getFromCache(cacheKey);
+  if (cached) return cached;
 
   const prompt = `Analyze the English word "${word}". 
   Provide 3-5 related words (synonyms, antonyms, derivatives, or phrases).
@@ -115,8 +163,13 @@ export const getWordAssociations = async (word: string): Promise<{ word: string,
   Return ONLY JSON.`;
 
   try {
-    const result = await callDoubao([{ role: "user", content: prompt }], "You are a helpful assistant. Return ONLY valid JSON.");
-    return JSON.parse(cleanJson(result));
+    const result = await callDeepSeek([{ role: "user", content: prompt }], "You are a helpful assistant. Return ONLY valid JSON.");
+    const parsed = JSON.parse(cleanJson(result));
+
+    // Save to cache
+    await saveToCache(cacheKey, parsed);
+
+    return parsed;
   } catch (error) {
     console.error("Association Error:", error);
     return [];
@@ -124,10 +177,17 @@ export const getWordAssociations = async (word: string): Promise<{ word: string,
 };
 
 /**
- * AI 语境造句服务
+ * AI 语境造句服务 - 带缓存
  */
 export const generateContextualSentences = async (words: { english: string, chinese: string }[]): Promise<any[]> => {
   if (!words.length) return [];
+
+  const wordList = words.map(w => w.english).sort().join(',');
+  const cacheKey = `sentences:${wordList.toLowerCase()}`;
+
+  // Check cache first
+  const cached = await getFromCache(cacheKey);
+  if (cached) return cached;
 
   const prompt = `You are an English teacher. For each of these words, create one simple and natural example sentence. 
   CRITICAL RULE: Apart from the target word itself, ALL other words in the sentence MUST be very simple (CEFR A1/A2 level). Do not use complex vocabulary.
@@ -140,8 +200,13 @@ export const generateContextualSentences = async (words: { english: string, chin
   - "chinese": The concise Chinese definition of the TARGET WORD.`;
 
   try {
-    const result = await callDoubao([{ role: "user", content: prompt }], "You are a helpful assistant. Return ONLY valid JSON.");
-    return JSON.parse(cleanJson(result));
+    const result = await callDeepSeek([{ role: "user", content: prompt }], "You are a helpful assistant. Return ONLY valid JSON.");
+    const parsed = JSON.parse(cleanJson(result));
+
+    // Save to cache
+    await saveToCache(cacheKey, parsed);
+
+    return parsed;
   } catch (error) {
     console.error("Sentence Generation Error:", error);
     return [];
@@ -149,10 +214,17 @@ export const generateContextualSentences = async (words: { english: string, chin
 };
 
 /**
- * AI 故事生成服务
+ * AI 故事生成服务 - 带缓存
  */
 export const generateStory = async (words: { english: string, chinese: string }[]): Promise<any> => {
   if (!words.length) return null;
+
+  const wordList = words.map(w => w.english).sort().join(',');
+  const cacheKey = `story:${wordList.toLowerCase()}`;
+
+  // Check cache first
+  const cached = await getFromCache(cacheKey);
+  if (cached) return cached;
 
   const prompt = `Write a short, coherent story that naturally incorporates ALL of the following target words: ${words.map(w => w.english).join(', ')}.
     
@@ -169,8 +241,13 @@ export const generateStory = async (words: { english: string, chinese: string }[
   `;
 
   try {
-    const result = await callDoubao([{ role: "user", content: prompt }], "You are a helpful assistant. Return ONLY valid JSON.");
-    return JSON.parse(cleanJson(result));
+    const result = await callDeepSeek([{ role: "user", content: prompt }], "You are a helpful assistant. Return ONLY valid JSON.");
+    const parsed = JSON.parse(cleanJson(result));
+
+    // Save to cache
+    await saveToCache(cacheKey, parsed);
+
+    return parsed;
   } catch (error) {
     console.error("Story Generation Error:", error);
     return null;
