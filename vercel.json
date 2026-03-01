@@ -3,6 +3,10 @@
         {
             "source": "/supa-api/:match*",
             "destination": "https://vqfsbewzizanswvxkexq.supabase.co/:match*"
+        },
+        {
+            "source": "/deepseek-api/:match*",
+            "destination": "https://api.deepseek.com/:match*"
         }
     ]
 }
