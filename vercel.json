@@ -1,12 +1,12 @@
 {
     "rewrites": [
         {
-            "source": "/supa-api/:match*",
-            "destination": "https://vqfsbewzizanswvxkexq.supabase.co/:match*"
+            "source": "/supa-api/:path*",
+            "destination": "https://vqfsbewzizanswvxkexq.supabase.co/:path*"
         },
         {
-            "source": "/deepseek-api/:match*",
-            "destination": "https://api.deepseek.com/:match*"
+            "source": "/deepseek-api/:path*",
+            "destination": "https://api.deepseek.com/:path*"
         }
     ]
 }
