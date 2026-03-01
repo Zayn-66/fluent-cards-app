@@ -18,12 +18,16 @@ async function getFromCache(cacheKey: string): Promise<any | null> {
       .eq('cache_key', cacheKey)
       .single();
 
-    if (error || !data) return null;
+    if (error) {
+      console.error('❌ Cache read error:', error.message, error.details);
+      return null;
+    }
+    if (!data) return null;
 
     console.log('✅ Cache Hit:', cacheKey);
     return data.result;
   } catch (e) {
-    console.warn('Cache read error:', e);
+    console.warn('Cache read catch error:', e);
     return null;
   }
 }
@@ -47,7 +51,9 @@ async function callDeepSeek(messages: any[], systemPrompt: string = "") {
     throw new Error("Missing DeepSeek API Configuration");
   }
 
-  const url = "https://api.deepseek.com/chat/completions";
+  // Use proxy in development to bypass SSL issues
+  const isDev = import.meta.env.DEV;
+  const url = isDev ? "/deepseek-api/chat/completions" : "https://api.deepseek.com/chat/completions";
 
   const fullMessages = [
     { role: "system", content: systemPrompt },

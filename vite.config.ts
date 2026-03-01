@@ -15,6 +15,12 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/supa-api/, ''),
           secure: false, // 忽略 SSL 证书验证（有助于解决某些网络问题）
         },
+        '/deepseek-api': {
+          target: 'https://api.deepseek.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/deepseek-api/, ''),
+          secure: false, // 忽略 SSL 证书验证
+        },
       },
     },
     plugins: [react()],
